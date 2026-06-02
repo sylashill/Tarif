@@ -72,6 +72,7 @@ const Storage = (() => {
     ingTags:    'td_ing_tags_v3',
     toolTags:   'td_tool_tags_v3',
     imgLib:     'td_img_lib_v3',   // { id, name, addedAt }[]
+    shopping:   'td_shopping_v3',  // alışveriş listesi
   };
 
   function _get(key, fallback) {
@@ -111,6 +112,10 @@ const Storage = (() => {
   // Görsel kütüphanesi meta
   function getImgLib()         { return _get(KEYS.imgLib, []); }
   function saveImgLib(arr)     { _set(KEYS.imgLib, arr); }
+
+  // Alışveriş listesi
+  function getShopping()       { return _get(KEYS.shopping, []); }
+  function saveShopping(arr)   { _set(KEYS.shopping, arr); }
 
   // ---------- Export / Import ----------
 
@@ -221,6 +226,7 @@ const Storage = (() => {
     getIngTags, saveIngTags,
     getToolTags, saveToolTags,
     getImgLib, saveImgLib,
+    getShopping, saveShopping,
     exportAll, importAll,
     exportRecipe, importRecipe,
     downloadJSON,

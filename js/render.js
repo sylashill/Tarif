@@ -123,9 +123,12 @@ const Render = (() => {
         <div id="portion-ingredients-${r.id}"></div>
       </div>
 
+      ${(r.stepsArray?.length || r.stepsText) ? `<button class="cook-start-btn" style="border-color:${r.color};color:${r.color}" onclick="Render.startCookMode(${r.id})">🍳 Pişirme Modunu Başlat</button>` : ''}
+
       <div class="action-row">
         <button class="edit-btn" style="background:${r.color}" onclick="Form.openEdit(${r.id})">✏️ Düzenle</button>
         <button class="copy-btn" onclick="App.copyRecipe(${r.id})">📋</button>
+        <button class="add-shop-btn" onclick="App.addToShopping(${r.id})">🛒</button>
         <button class="export-btn" onclick="App.exportRecipe(${r.id})">📤</button>
         <button class="delete-btn" onclick="App.openDeleteModal(${r.id})">🗑️</button>
       </div>
@@ -168,87 +171,92 @@ const Render = (() => {
     // zaten onclick ile kuruldu, burada ekstra yapılacak bir şey yok
   }
 
-  // ---- Araç popup ----
-  let _popupTool = null;
-  let _popupColor = '#e8521a';
-
+  // ---- Araç popup (düzenlenebilir) ----
+  let _popupTool=null, _popupColor='#e8521a';
   function showToolPopup(toolName, color) {
     const tool = Settings.getToolByName(toolName);
     if (!tool) return;
-    _popupTool  = tool;
-    _popupColor = color;
+    _popupTool=tool; _popupColor=color;
     _renderToolPopup();
     document.getElementById('tool-popup').classList.add('open');
   }
-
-  function _renderToolPopup() {
-    const tool  = _popupTool;
-    const color = _popupColor;
+  function _renderToolPopup(){
+    const tool=_popupTool, color=_popupColor;
     const altHtml = tool.alt?.length
-      ? tool.alt.map((a, i) => `
-          <div class="tool-alt-card">
-            <div class="tool-alt-row">
-              <div>
-                <div class="tool-alt-name">🔧 ${a.name}</div>
-                <div class="tool-alt-tip">${a.tip || ''}</div>
-              </div>
-              <button class="tool-alt-del" onclick="Render._deleteAlt('${tool.name}',${i})">🗑️</button>
-            </div>
-          </div>`).join('')
+      ? tool.alt.map((a,i)=>`
+          <div class="tool-alt-card"><div class="tool-alt-row">
+            <div><div class="tool-alt-name">🔧 ${a.name}</div><div class="tool-alt-tip">${a.tip||''}</div></div>
+            <button class="tool-alt-del" onclick="Render._deleteAlt('${tool.name}',${i})">🗑️</button>
+          </div></div>`).join('')
       : '<div class="tool-no-alt">Henüz alternatif eklenmedi</div>';
-
     document.getElementById('tool-popup').innerHTML = `
       <div class="tool-popup-inner" onclick="event.stopPropagation()">
         <div class="tool-popup-title" style="color:${color}">🔧 ${tool.name} Alternatifleri</div>
-        <div class="tool-alts" id="tool-alts-list">${altHtml}</div>
+        <div class="tool-alts">${altHtml}</div>
         <div class="tool-add-form">
-          <input class="tool-add-input" id="tool-alt-name-input" placeholder="Alternatif araç adı (örn: airfryer)">
+          <input class="tool-add-input" id="tool-alt-name-input" placeholder="Alternatif (örn: airfryer)">
           <input class="tool-add-input" id="tool-alt-tip-input" placeholder="Not (örn: 180°C, 15 dk)">
           <button class="tool-add-btn" style="background:${color}" onclick="Render._addAlt('${tool.name}')">+ Ekle</button>
         </div>
         <button class="tool-popup-close" onclick="Render.closeToolPopup()">Kapat</button>
       </div>`;
   }
-
-  function _addAlt(toolName) {
-    const nameEl = document.getElementById('tool-alt-name-input');
-    const tipEl  = document.getElementById('tool-alt-tip-input');
-    const name = nameEl?.value.trim();
-    if (!name) return;
-    const tool = Settings.getToolByName(toolName);
-    if (!tool) return;
-    if (!tool.alt) tool.alt = [];
-    tool.alt.push({ name, tip: tipEl?.value.trim() || '' });
-    // Ayarlara kaydet
-    const toolTags = Settings.getToolTags();
-    for (const cat of Object.values(toolTags)) {
-      const t = cat.find(x => x.name === toolName);
-      if (t) { t.alt = tool.alt; break; }
-    }
-    Storage.saveToolTags(toolTags);
-    Settings.load();
-    _popupTool = Settings.getToolByName(toolName);
-    _renderToolPopup();
+  function _saveToolAlt(toolName, altArr){
+    const tt=Settings.getToolTags();
+    for(const cat of Object.values(tt)){const t=cat.find(x=>x.name===toolName);if(t){t.alt=altArr;break;}}
+    Storage.saveToolTags(tt); Settings.load();
+    _popupTool=Settings.getToolByName(toolName); _renderToolPopup();
   }
-
-  function _deleteAlt(toolName, idx) {
-    const tool = Settings.getToolByName(toolName);
-    if (!tool) return;
-    tool.alt.splice(idx, 1);
-    const toolTags = Settings.getToolTags();
-    for (const cat of Object.values(toolTags)) {
-      const t = cat.find(x => x.name === toolName);
-      if (t) { t.alt = tool.alt; break; }
-    }
-    Storage.saveToolTags(toolTags);
-    Settings.load();
-    _popupTool = Settings.getToolByName(toolName);
-    _renderToolPopup();
+  function _addAlt(toolName){
+    const n=document.getElementById('tool-alt-name-input')?.value.trim();
+    const tip=document.getElementById('tool-alt-tip-input')?.value.trim()||'';
+    if(!n)return;
+    const tool=Settings.getToolByName(toolName); if(!tool)return;
+    const alt=tool.alt?[...tool.alt]:[]; alt.push({name:n,tip});
+    _saveToolAlt(toolName,alt);
+  }
+  function _deleteAlt(toolName,idx){
+    const tool=Settings.getToolByName(toolName); if(!tool)return;
+    const alt=[...tool.alt]; alt.splice(idx,1);
+    _saveToolAlt(toolName,alt);
   }
 
   function closeToolPopup() {
     document.getElementById('tool-popup').classList.remove('open');
   }
+
+  // ---- Pişirme Modu (tam ekran adım adım) ----
+  let _cookSteps=[], _cookIdx=0, _cookColor='#e8521a', _cookTitle='';
+  function startCookMode(recipeId){
+    const r=App.getRecipeById(recipeId); if(!r)return;
+    if(r.stepsArray?.length) _cookSteps=[...r.stepsArray];
+    else if(r.stepsText) _cookSteps=r.stepsText.split(/\n\n+/).map(s=>s.trim()).filter(Boolean);
+    else return;
+    _cookIdx=0; _cookColor=r.color; _cookTitle=r.name;
+    document.getElementById('cook-overlay').classList.add('open');
+    _renderCook();
+  }
+  function _renderCook(){
+    const total=_cookSteps.length;
+    const dots=_cookSteps.map((_,i)=>`<div class="cook-dot ${i<_cookIdx?'done':(i===_cookIdx?'active':'')}" style="${i===_cookIdx?'background:'+_cookColor:''}"></div>`).join('');
+    document.getElementById('cook-overlay').innerHTML=`
+      <div class="cook-header" style="background:${_cookColor}">
+        <span class="cook-header-title">${_cookTitle}</span>
+        <button class="cook-close" onclick="Render.closeCookMode()">✕</button>
+      </div>
+      <div class="cook-body">
+        <div class="cook-step-num">Adım ${_cookIdx+1} / ${total}</div>
+        <div class="cook-step-text">${_esc(_cookSteps[_cookIdx])}</div>
+        <div class="cook-progress">${dots}</div>
+      </div>
+      <div class="cook-footer">
+        ${_cookIdx>0?`<button class="cook-nav-btn cook-prev" onclick="Render.cookPrev()">← Önceki</button>`:''}
+        ${_cookIdx<total-1?`<button class="cook-nav-btn cook-next" style="background:${_cookColor}" onclick="Render.cookNext()">Sonraki →</button>`:`<button class="cook-nav-btn cook-next" style="background:#00b894" onclick="Render.closeCookMode()">✓ Bitti</button>`}
+      </div>`;
+  }
+  function cookNext(){ if(_cookIdx<_cookSteps.length-1){_cookIdx++;_renderCook();} }
+  function cookPrev(){ if(_cookIdx>0){_cookIdx--;_renderCook();} }
+  function closeCookMode(){ document.getElementById('cook-overlay').classList.remove('open'); }
 
   // ---- Porsiyon hesap ----
   let _portionMultipliers = {};
@@ -366,6 +374,7 @@ const Render = (() => {
     recipeList, detail,
     showToolPopup, closeToolPopup,
     _addAlt, _deleteAlt,
+    startCookMode, cookNext, cookPrev, closeCookMode,
     changePortion,
     heatList, heatDetail,
   };

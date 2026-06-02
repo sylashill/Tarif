@@ -23,6 +23,7 @@ const App = (() => {
     Render.heatList(Storage.getHeatItems());
     showPage('recipes');
     _setupBottomNav();
+    _renderQuickActions();
   }
 
   // ---------- Sayfalar ----------
@@ -148,6 +149,86 @@ const App = (() => {
     _searchQuery = val;
     document.getElementById('suggestions').innerHTML='';
     _renderList();
+  }
+
+  // ---------- Hızlı Aksiyonlar ----------
+  function _renderQuickActions() {
+    const el = document.getElementById('quick-actions');
+    if (!el) return;
+    el.innerHTML = `
+      <button class="quick-btn" onclick="App.randomRecipe()">🎲 Rastgele Tarif</button>
+      <button class="quick-btn" onclick="App.openShopping()">🛒 Alışveriş Listesi</button>`;
+  }
+
+  function randomRecipe() {
+    const recipes = Storage.getRecipes().filter(r => !r.isDraft);
+    if (!recipes.length) { showToast('Henüz tarif yok'); return; }
+    const r = recipes[Math.floor(Math.random()*recipes.length)];
+    openDetail(r.id);
+  }
+
+  // ---------- Alışveriş Listesi ----------
+  function addToShopping(recipeId) {
+    const r = getRecipeById(recipeId);
+    if (!r || !r.ingredients?.length) { showToast('Malzeme yok'); return; }
+    const list = Storage.getShopping();
+    let added = 0;
+    r.ingredients.forEach(ing => {
+      const name = String(ing).trim();
+      if (!list.find(x => x.name.toLowerCase() === name.toLowerCase())) {
+        list.push({ id: Date.now()+Math.random(), name, from: r.name, done: false });
+        added++;
+      }
+    });
+    Storage.saveShopping(list);
+    showToast(`🛒 ${added} malzeme eklendi`);
+  }
+
+  function openShopping() {
+    document.getElementById('shop-overlay').classList.add('open');
+    _renderShopping();
+  }
+  function closeShopping() {
+    document.getElementById('shop-overlay').classList.remove('open');
+  }
+  function _renderShopping() {
+    const list = Storage.getShopping();
+    const body = document.getElementById('shop-list');
+    if (!list.length) {
+      body.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">Liste boş</div><div class="empty-hint">Tariflerden malzeme ekleyebilirsin</div></div>';
+    } else {
+      body.innerHTML = list.map(item => `
+        <div class="shop-item ${item.done?'done':''}">
+          <div class="shop-check ${item.done?'checked':''}" onclick="App.toggleShopItem('${item.id}')">${item.done?'✓':''}</div>
+          <div class="shop-item-name">${item.name}${item.from?`<div class="shop-item-from">${item.from}</div>`:''}</div>
+          <button class="tag-del" onclick="App.removeShopItem('${item.id}')">×</button>
+        </div>`).join('');
+    }
+  }
+  function toggleShopItem(id) {
+    const list = Storage.getShopping();
+    const item = list.find(x => String(x.id) === String(id));
+    if (item) { item.done = !item.done; Storage.saveShopping(list); _renderShopping(); }
+  }
+  function removeShopItem(id) {
+    let list = Storage.getShopping().filter(x => String(x.id) !== String(id));
+    Storage.saveShopping(list);
+    _renderShopping();
+  }
+  function addShopManual() {
+    const inp = document.getElementById('shop-add-input');
+    const val = inp?.value.trim();
+    if (!val) return;
+    const list = Storage.getShopping();
+    list.push({ id: Date.now()+Math.random(), name: val, from:'', done:false });
+    Storage.saveShopping(list);
+    if (inp) inp.value = '';
+    _renderShopping();
+  }
+  function clearShoppingDone() {
+    const list = Storage.getShopping().filter(x => !x.done);
+    Storage.saveShopping(list);
+    _renderShopping();
   }
 
   // ---------- Detay ----------
@@ -279,7 +360,6 @@ const App = (() => {
 
   return {
     init, showPage, showView,
-    get _cp() { return _currentPage; },
     setSearchMode, onSearch, _selectSuggestion,
     _setCategory, _setSort,
     openDetail, getRecipeById,
@@ -288,6 +368,8 @@ const App = (() => {
     openHeatDetail,
     openHeatDeleteModal, closeHeatDeleteModal, confirmHeatDelete,
     exportAll, exportAllWithImages, exportRecipe, importAll,
+    randomRecipe, addToShopping, openShopping, closeShopping,
+    toggleShopItem, removeShopItem, addShopManual, clearShoppingDone,
     showToast,
   };
 })();

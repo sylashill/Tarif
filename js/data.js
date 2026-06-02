@@ -108,7 +108,6 @@ const DEFAULT_TOOL_TAGS = {
     { name:'tencere',            alt:[] },
     { name:'düdüklü tencere',    alt:[] },
     { name:'yavaş pişirici',     alt:[] },
-    { name:'fırın ızgarası',     alt:[] },
   ],
   'Mutfak Aletleri': [
     { name:'blender',            alt:[] },
