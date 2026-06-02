@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a2e">
+<title>Tarif Defterim</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Lora:wght@400;700&family=Nunito:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app-shell">
+
+  <!-- ══════════════ RECIPES PAGE ══════════════ -->
+  <div id="page-recipes" class="page">
+    <div class="top-bar">
+      <div class="top-bar-inner">
+        <div>
+          <div class="top-label">Tarif Defterim</div>
+          <div class="top-count" id="recipe-count">0 tarif</div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" onclick="Settings.openPanel()">⚙️</button>
+          <button class="fab" onclick="Form.openAdd()">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sort-bar" id="sort-bar"></div>
+
+    <div class="search-toggle">
+      <button class="toggle-btn active" id="btn-search-name" onclick="App.setSearchMode('name')">🔍 Tarif Ara</button>
+      <button class="toggle-btn" id="btn-search-ing" onclick="App.setSearchMode('ingredient')">🧂 Malzemeye Göre</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon" id="search-icon">🔍</span>
+      <input class="search-input" id="search-input" placeholder="Tarif ara..." oninput="App.onSearch(this.value)">
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+
+    <div class="cat-scroll" id="cat-scroll"></div>
+    <div class="recipe-list" id="recipe-list"></div>
+  </div>
+
+  <!-- ══════════════ ISIT-YE PAGE ══════════════ -->
+  <div id="page-heat" class="page">
+    <div class="top-bar">
+      <div class="top-bar-inner">
+        <div>
+          <div class="top-label">Isıt-Ye</div>
+          <div class="top-count">Hazır Yiyecekler</div>
+        </div>
+        <div class="top-actions">
+          <button class="fab" onclick="HeatForm.openAdd()">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="recipe-list" id="heat-list"></div>
+  </div>
+
+  <!-- ══════════════ BOTTOM NAV ══════════════ -->
+  <div id="bottom-nav"></div>
+
+  <!-- ══════════════ RECIPE DETAIL VIEW ══════════════ -->
+  <div id="view-detail" class="full-view">
+    <div class="detail-header" id="detail-header">
+      <button class="back-btn" onclick="App.showPage(App._currentPage||'recipes')">←</button>
+      <div id="detail-thumb-wrap"></div>
+      <div class="detail-category" id="detail-category"></div>
+      <h1 class="detail-title" id="detail-title"></h1>
+      <div class="meta-badges" id="detail-meta"></div>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+
+  <!-- ══════════════ RECIPE FORM VIEW ══════════════ -->
+  <div id="view-form" class="full-view">
+    <div class="form-header">
+      <button class="back-btn2" onclick="Form.cancel()">←</button>
+      <div id="form-title-text">Yeni Tarif</div>
+    </div>
+    <div id="form-progress"></div>
+    <div class="form-body" id="form-page-body"></div>
+    <div class="form-footer">
+      <button id="form-draft-btn" onclick="Form.save(true)">📋 Taslak</button>
+      <button id="form-prev-btn" onclick="Form.prevPage()" style="display:none">← Geri</button>
+      <button id="form-next-btn" onclick="Form.nextPage()">Devam Et →</button>
+      <button id="form-save-btn" onclick="Form.save(false)" style="display:none">Kaydet ✓</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ HEAT DETAIL VIEW ══════════════ -->
+  <div id="view-heat-detail" class="full-view">
+    <div class="detail-header" style="background:#6c5ce7">
+      <button class="back-btn" onclick="App.showPage('heat')">←</button>
+    </div>
+    <div class="detail-body" id="heat-detail-body"></div>
+  </div>
+
+  <!-- ══════════════ HEAT FORM VIEW ══════════════ -->
+  <div id="view-heat-form" class="full-view">
+    <div class="form-header">
+      <button class="back-btn2" onclick="HeatForm.cancel()">←</button>
+      <div id="heat-form-title" style="color:#fff;font-size:18px;font-family:var(--header-font)">Yeni Ürün</div>
+    </div>
+    <div class="form-body" id="heat-form-body"></div>
+  </div>
+
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>Tarifi Sil</h3>
+    <p>Bu tarifi silmek istediğine emin misin? Geri alınamaz.</p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="App.closeDeleteModal()">İptal</button>
+      <button class="modal-confirm" onclick="App.confirmDelete()">Sil</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="heat-delete-modal">
+  <div class="modal">
+    <h3>Ürünü Sil</h3>
+    <p>Bu ürünü silmek istediğine emin misin?</p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="App.closeHeatDeleteModal()">İptal</button>
+      <button class="modal-confirm" onclick="App.confirmHeatDelete()">Sil</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings panel -->
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)Settings.closePanel()">
+  <div class="settings-modal">
+    <div class="settings-title">⚙️ Ayarlar</div>
+    <div id="settings-content"></div>
+    <button class="settings-close-btn" onclick="Settings.closePanel()">Tamam</button>
+  </div>
+</div>
+
+<!-- Tool alternative popup -->
+<div class="tool-popup-overlay" id="tool-popup" onclick="Render.closeToolPopup()"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/render.js"></script>
+<script src="js/form.js"></script>
+<script src="js/heatform.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // Expose _currentPage for back button
+  Object.defineProperty(App, '_currentPage', { get: () => App._cp || 'recipes' });
+
+  window.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
