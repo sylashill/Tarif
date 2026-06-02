@@ -29,6 +29,7 @@
       </div>
     </div>
 
+    <div class="quick-actions" id="quick-actions"></div>
     <div class="sort-bar" id="sort-bar"></div>
 
     <div class="search-toggle">
@@ -145,6 +146,26 @@
 
 <!-- Tool alternative popup -->
 <div class="tool-popup-overlay" id="tool-popup" onclick="Render.closeToolPopup()"></div>
+
+<!-- Alışveriş Listesi -->
+<div class="shop-overlay" id="shop-overlay" onclick="if(event.target===this)App.closeShopping()">
+  <div class="shop-modal">
+    <div class="shop-title">🛒 Alışveriş Listesi</div>
+    <div class="shop-sub">Tariflerden eklenen malzemeler burada toplanır</div>
+    <div class="shop-add-row">
+      <input class="shop-add-input" id="shop-add-input" placeholder="Malzeme ekle..." onkeydown="if(event.key==='Enter')App.addShopManual()">
+      <button class="add-cat-btn" onclick="App.addShopManual()">Ekle</button>
+    </div>
+    <div class="shop-list" id="shop-list"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="shop-close-btn" style="flex:1;background:var(--card2);color:var(--text)" onclick="App.clearShoppingDone()">Tamamlananı Temizle</button>
+      <button class="shop-close-btn" style="flex:1" onclick="App.closeShopping()">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pişirme Modu (tam ekran) -->
+<div class="cook-overlay" id="cook-overlay"></div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
