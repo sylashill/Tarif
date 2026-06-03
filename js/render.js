@@ -135,6 +135,18 @@ const Render = (() => {
     `;
 
     _setupToolHighlights(r.color);
+
+    // Banner küçülme: görsel varsa scroll'da header collapse
+    const hdr = document.getElementById('detail-header');
+    const bdy = document.getElementById('detail-body');
+    if (hdr && bdy) {
+      hdr.classList.toggle('has-hero', !!r.hasImage);
+      bdy.onscroll = () => {
+        if (bdy.scrollTop > 30) hdr.classList.add('collapsed');
+        else hdr.classList.remove('collapsed');
+      };
+      hdr.classList.remove('collapsed');
+    }
   }
 
   // ---- Adımlar HTML ----

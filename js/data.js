@@ -140,3 +140,57 @@ const HEAT_METHODS = [
   { id:'buhur',    label:'Buharlı',      icon:'♨️', unit:'dk' },
   { id:'izgara',   label:'Izgara',       icon:'🔲', unit:'°C' },
 ];
+
+// ============================================================
+// Ölçü birimleri — toplu malzeme yapıştırmada akıllı ayrıştırma
+// ============================================================
+const MEASURE_UNITS = [
+  // hacim/kaşık
+  'yemek kaşığı','tatlı kaşığı','çay kaşığı','kaşık',
+  'su bardağı','çay bardağı','bardak','fincan',
+  'litre','lt','mililitre','ml','cl','dl',
+  // ağırlık
+  'kilogram','kilo','kg','gram','gr','g','mg',
+  // adet/grup
+  'adet','tane','paket','kutu','konserve','demet','dal','diş','baş',
+  'avuç','tutam','dilim','parça','yaprak','salkım','fileto','but',
+  // tarif dili
+  'çimdik','damla','şişe','poşet','top','küp','bardağı',
+];
+
+// Sayı + birim yakalama için (Türkçe ondalık virgül de destekli)
+// Örn: "1.5 yemek kaşığı zeytinyağı" → amount:"1.5 yemek kaşığı", name:"zeytinyağı"
+//      "2 su bardağı un"            → amount:"2 su bardağı", name:"un"
+//      "3 diş sarımsak"             → amount:"3 diş", name:"sarımsak"
+//      "yarım limon"                → amount:"yarım", name:"limon"
+//      "tuz"                        → amount:"", name:"tuz"
+const QUANTITY_WORDS = ['yarım','çeyrek','birkaç','bir','iki','üç','dört','beş','az','bol','biraz'];
+
+// ============================================================
+// Detaylı entry — kutu tipleri ve blok tipleri
+// ============================================================
+const BOX_TYPES = [
+  { id:'tip',  label:'İpucu',  icon:'💡', cls:'box-tip'  },
+  { id:'warn', label:'Uyarı',  icon:'⚠️', cls:'box-warn' },
+  { id:'ok',   label:'Not',    icon:'✅', cls:'box-ok'   },
+];
+
+// Detaylı entry blok tipleri (her sekme içine eklenebilir)
+const BLOCK_TYPES = [
+  { id:'ingredients', label:'Malzeme Grubu', icon:'🛒' },
+  { id:'steps',       label:'Adımlar',        icon:'👨‍🍳' },
+  { id:'box',         label:'Kutu (İpucu/Uyarı/Not)', icon:'💬' },
+  { id:'text',        label:'Serbest Metin',  icon:'📝' },
+  { id:'layers',      label:'Katman Sırası',  icon:'🍔' },
+  { id:'mini',        label:'Mini Tarif',     icon:'🥄' },
+];
+
+// Detaylı entry için entry-özel tema paletleri
+const ENTRY_THEMES = [
+  { id:'gold',   label:'Altın Gece',  bg:'#0f0e0c', card:'#1a1814', accent:'#c9a84c', cream:'#f0e6d0' },
+  { id:'crimson',label:'Bordo',       bg:'#160a0a', card:'#1f1010', accent:'#c0392b', cream:'#f5e0dc' },
+  { id:'forest', label:'Orman',       bg:'#0a140d', card:'#111f15', accent:'#4a9c6d', cream:'#dff0e4' },
+  { id:'ocean',  label:'Okyanus',     bg:'#0a1320', card:'#0f1e30', accent:'#4fc3f7', cream:'#d0e8f5' },
+  { id:'plum',   label:'Mor',         bg:'#130a1a', card:'#1d1028', accent:'#a06cd5', cream:'#ece0f5' },
+  { id:'paper',  label:'Açık Kağıt',  bg:'#faf6ef', card:'#ffffff', accent:'#c0622a', cream:'#2d1a0e' },
+];
