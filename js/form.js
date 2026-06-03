@@ -68,13 +68,67 @@ const Form = (() => {
     _renderPage();
   }
 
+  // Akıllı malzeme ayrıştırma: miktar+birim ↔ malzeme adı
   function _parseIngredient(i) {
     if (typeof i === 'object' && i !== null) return { amount:i.amount||'', name:i.name||'' };
-    const str = String(i).trim();
-    const m = str.match(/^([\d.,]+\s*[a-zA-ZçÇğĞıİöÖşŞüÜ.]*)\s+(.+)$/);
-    if (m && /\d/.test(m[1])) return { amount:m[1].trim(), name:m[2].trim() };
-    return { amount:'', name:str };
+    return _smartParse(String(i).trim());
   }
+
+  // Tek satırı miktar/birim ve isim olarak akıllı ayır
+  // "1.5 yemek kaşığı zeytinyağı" → {amount:"1.5 yemek kaşığı", name:"zeytinyağı"}
+  // "2 su bardağı un"             → {amount:"2 su bardağı", name:"un"}
+  // "yarım limon"                 → {amount:"yarım", name:"limon"}
+  // "3 diş sarımsak"              → {amount:"3 diş", name:"sarımsak"}
+  // "tuz"                         → {amount:"", name:"tuz"}
+  function _smartParse(str) {
+    str = str.replace(/^[-•*–·\s]+/, '').trim(); // baştaki madde işaretlerini temizle
+    if (!str) return { amount:'', name:'' };
+
+    const lower = str.toLowerCase();
+    const units = (typeof MEASURE_UNITS !== 'undefined' ? MEASURE_UNITS : [])
+      .slice().sort((a,b)=>b.length-a.length); // uzun birimler önce ("su bardağı" > "bardağı")
+    const qtyWords = (typeof QUANTITY_WORDS !== 'undefined' ? QUANTITY_WORDS : []);
+
+    // 1) Sayı (1, 1.5, 1,5, ½ vb.) ile başlıyor mu?
+    const numMatch = str.match(/^([\d]+[.,]?[\d]*|½|¼|¾|⅓|⅔)\s*/);
+    if (numMatch) {
+      let rest = str.slice(numMatch[0].length);
+      const restLow = rest.toLowerCase();
+      // Sayıdan sonra birim geliyor mu?
+      for (const u of units) {
+        if (restLow.startsWith(u + ' ') || restLow === u) {
+          const name = rest.slice(u.length).trim();
+          return { amount: (numMatch[1] + ' ' + u).trim(), name: name || u };
+        }
+      }
+      // Birim yok ama sayı var: "2 yumurta" → amount:"2", name:"yumurta"
+      return { amount: numMatch[1].trim(), name: rest.trim() };
+    }
+
+    // 2) "yarım / birkaç / bir" gibi miktar kelimesiyle başlıyor mu?
+    for (const q of qtyWords) {
+      if (lower.startsWith(q + ' ')) {
+        let rest = str.slice(q.length).trim();
+        const restLow = rest.toLowerCase();
+        for (const u of units) {
+          if (restLow.startsWith(u + ' ') || restLow === u) {
+            const name = rest.slice(u.length).trim();
+            return { amount: (q + ' ' + u).trim(), name: name || u };
+          }
+        }
+        return { amount: q, name: rest };
+      }
+    }
+
+    // 3) Hiç miktar yok — tamamı malzeme adı
+    return { amount:'', name: str };
+  }
+
+  // Toplu metni satır satır ayrıştır
+  function _bulkParse(text) {
+    return text.split(/\n+/).map(l => l.trim()).filter(Boolean).map(_smartParse).filter(i => i.name);
+  }
+
   function _ingStr(ing){ return ing.amount ? `${ing.amount} ${ing.name}` : ing.name; }
 
   // ============ RENDER ============
@@ -128,7 +182,10 @@ const Form = (() => {
       <div class="form-section">
         <div class="form-section-header"><span class="form-section-icon">🛒</span><span class="form-section-title">Malzemeler</span></div>
         <div class="ing-editor" id="ing-editor">${_renderIngRows()}</div>
-        <button class="add-step-btn" onclick="Form._addIngRow()">+ Malzeme Ekle</button>
+        <div class="ing-btn-row">
+          <button class="add-step-btn" onclick="Form._addIngRow()">+ Malzeme Ekle</button>
+          <button class="bulk-paste-btn" onclick="Form._openBulkPaste()">📋 Toplu Yapıştır</button>
+        </div>
         <div class="form-hint-text" style="margin-top:6px">Miktar opsiyonel. Yazdıkça uygun etiketler önerilir.</div>
         <div id="tag-suggest-area" style="margin-top:10px">${_renderTagSuggest()}</div>
       </div>
@@ -291,6 +348,29 @@ const Form = (() => {
   function _addIngRow(){ _fd.ingredients.push({amount:'',name:''}); _patchIng(); }
   function _delIngRow(i){ _fd.ingredients.splice(i,1); if(!_fd.ingredients.length)_fd.ingredients=[{amount:'',name:''}]; _patchIng(); }
   function _patchIng(){ const e=document.getElementById('ing-editor'); if(e)e.innerHTML=_renderIngRows(); _refreshTagSuggest(); }
+
+  // Toplu yapıştırma popup
+  function _openBulkPaste(){
+    const ov = document.getElementById('bulk-paste-overlay');
+    if (!ov) return;
+    ov.classList.add('open');
+    const ta = document.getElementById('bulk-paste-input');
+    if (ta){ ta.value=''; setTimeout(()=>ta.focus(),50); }
+  }
+  function _closeBulkPaste(){ document.getElementById('bulk-paste-overlay')?.classList.remove('open'); }
+  function _applyBulkPaste(){
+    const ta = document.getElementById('bulk-paste-input');
+    const text = ta?.value || '';
+    const parsed = _bulkParse(text);
+    if (!parsed.length){ App.showToast('Ayrıştırılacak malzeme bulunamadı'); return; }
+    // Mevcut boş satırları temizle, yenileri ekle
+    _fd.ingredients = _fd.ingredients.filter(i => (i.name||'').trim());
+    parsed.forEach(p => _fd.ingredients.push(p));
+    if (!_fd.ingredients.length) _fd.ingredients=[{amount:'',name:''}];
+    _closeBulkPaste();
+    _patchIng();
+    App.showToast(`✓ ${parsed.length} malzeme eklendi`);
+  }
   function _refreshTagSuggest(){ const e=document.getElementById('tag-suggest-area'); if(e)e.innerHTML=_renderTagSuggest(); }
 
   function _addStep(){ _fd.steps.push(''); _patchSteps(); }
@@ -453,6 +533,7 @@ const Form = (() => {
     nextPage, prevPage, save,
     _goPage, _set, _setIng, _setStep,
     _addIngRow, _delIngRow, _refreshTagSuggest,
+    _openBulkPaste, _closeBulkPaste, _applyBulkPaste,
     _setStepsMode, _addStep, _delStep,
     _addTag, _removeTag, _toggleTag, _toggleTagBrowser,
     _toggleCat, _addCustomCat,

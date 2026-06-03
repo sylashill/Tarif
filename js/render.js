@@ -135,6 +135,21 @@ const Render = (() => {
     `;
 
     _setupToolHighlights(r.color);
+
+    // Banner küçülme — titremeyi önlemek için histerezis (farklı eşikler)
+    const hdr = document.getElementById('detail-header');
+    const bdy = document.getElementById('detail-body');
+    if (hdr && bdy) {
+      hdr.classList.toggle('has-hero', !!r.hasImage);
+      hdr.classList.remove('collapsed');
+      let collapsed = false;
+      bdy.onscroll = () => {
+        const y = bdy.scrollTop;
+        // Aşağı inerken 60px'de küçült, yukarı çıkarken 20px'de büyüt (histerezis)
+        if (!collapsed && y > 60) { collapsed = true; hdr.classList.add('collapsed'); }
+        else if (collapsed && y < 20) { collapsed = false; hdr.classList.remove('collapsed'); }
+      };
+    }
   }
 
   // ---- Adımlar HTML ----

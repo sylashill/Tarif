@@ -35,6 +35,8 @@ const App = (() => {
     document.getElementById('view-heat-form').style.display = 'none';
     document.getElementById('view-detail').style.display  = 'none';
     document.getElementById('view-heat-detail').style.display = 'none';
+    var dfv=document.getElementById('view-detail-form'); if(dfv)dfv.style.display='none';
+    var dvv=document.getElementById('view-detail-view'); if(dvv)dvv.style.display='none';
 
     // Bottom nav aktif
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -46,7 +48,7 @@ const App = (() => {
 
   function showView(view) {
     _currentView = view;
-    const allViews = ['page-recipes','page-heat','view-form','view-heat-form','view-detail','view-heat-detail'];
+    const allViews = ['page-recipes','page-heat','view-form','view-heat-form','view-detail','view-heat-detail','view-detail-form','view-detail-view'];
     allViews.forEach(id => { const el = document.getElementById(id); if(el) el.style.display='none'; });
     const target = document.getElementById('view-' + view) || document.getElementById(view);
     if (target) target.style.display = 'flex';
@@ -151,6 +153,16 @@ const App = (() => {
     _renderList();
   }
 
+  // ---------- Entry Tipi Seçici ----------
+  function chooseEntryType() {
+    document.getElementById('entry-type-overlay').classList.add('open');
+  }
+  function closeEntryType() {
+    document.getElementById('entry-type-overlay').classList.remove('open');
+  }
+  function newDefaultEntry() { closeEntryType(); Form.openAdd(); }
+  function newDetailedEntry() { closeEntryType(); DetailForm.openAdd(); }
+
   // ---------- Hızlı Aksiyonlar ----------
   function _renderQuickActions() {
     const el = document.getElementById('quick-actions');
@@ -233,6 +245,8 @@ const App = (() => {
 
   // ---------- Detay ----------
   function openDetail(id) {
+    const _r = getRecipeById(id);
+    if (_r && _r.type === 'detailed') { DetailView.open(_r); return; }
     const r = getRecipeById(id);
     if (!r) return;
     showView('detail');
@@ -359,6 +373,7 @@ const App = (() => {
   }
 
   return {
+    get _cp(){ return _currentPage; },
     init, showPage, showView,
     setSearchMode, onSearch, _selectSuggestion,
     _setCategory, _setSort,
@@ -368,6 +383,7 @@ const App = (() => {
     openHeatDetail,
     openHeatDeleteModal, closeHeatDeleteModal, confirmHeatDelete,
     exportAll, exportAllWithImages, exportRecipe, importAll,
+    chooseEntryType, closeEntryType, newDefaultEntry, newDetailedEntry,
     randomRecipe, addToShopping, openShopping, closeShopping,
     toggleShopItem, removeShopItem, addShopManual, clearShoppingDone,
     showToast,

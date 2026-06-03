@@ -49,30 +49,63 @@ const Settings = (() => {
     { id:'midnight', label:'Gece Mavisi', colors:['#4fc3f7','#0f1e35','#0a1628'] },
     { id:'warm',     label:'Sıcak Toprak',colors:['#c0622a','#fdf6ee','#3d2410'] },
     { id:'mint',     label:'Nane Yeşil',  colors:['#00897b','#f0faf8','#0d2b28'] },
+    { id:'rose',     label:'Gül',         colors:['#ec407a','#1a0f14','#261720'] },
+    { id:'emerald',  label:'Zümrüt',      colors:['#26d0a0','#08140f','#0f2018'] },
+    { id:'amber',    label:'Kehribar',    colors:['#ffb300','#1a1206','#26190a'] },
+    { id:'rosegold', label:'Pudra',       colors:['#c08552','#fdf3ee','#3a2418'] },
+    { id:'slate',    label:'Arduvaz',     colors:['#56c8d8','#0f1419','#1a2128'] },
   ];
 
+  // ---------- App tema renk setleri (data-theme yoksa JS ile uygula) ----------
+  const THEME_VARS = {
+    rose: { '--accent':'#ec407a','--dark':'#1a0f14','--cream':'#1a0f14','--card':'#261720','--card2':'#321d29','--border':'#3a2230','--muted':'#9a6a80','--text':'#fce4ec','--text2':'#caa0b0','--input-bg':'#261720','--top-bg':'#120a0e','--top-text':'#fce4ec','--top-sub':'#7a4a5e','--nav-bg':'#120a0e','--nav-border':'#3a2230','--nav-inactive':'#5a3045','--toggle-bg':'#2a1620','--toggle-active':'#ec407a','--settings-bg':'#261720','--modal-bg':'#261720','--step-bg':'#1a0f14','--note-bg':'#1e0f16','--heat-card-bg':'#1a0f14','--shadow':'0 2px 12px rgba(0,0,0,.5)','--shadow-lg':'0 4px 24px rgba(40,0,20,.7)' },
+    emerald: { '--accent':'#26d0a0','--dark':'#08140f','--cream':'#08140f','--card':'#0f2018','--card2':'#152d22','--border':'#1d3a2d','--muted':'#4a8a74','--text':'#d4f5e9','--text2':'#8accb4','--input-bg':'#0f2018','--top-bg':'#050d0a','--top-text':'#d4f5e9','--top-sub':'#3a6a55','--nav-bg':'#050d0a','--nav-border':'#1d3a2d','--nav-inactive':'#2a5a45','--toggle-bg':'#0f2818','--toggle-active':'#26d0a0','--settings-bg':'#0f2018','--modal-bg':'#0f2018','--step-bg':'#08140f','--note-bg':'#0a1a12','--heat-card-bg':'#08140f','--shadow':'0 2px 12px rgba(0,0,0,.5)','--shadow-lg':'0 4px 24px rgba(0,30,20,.7)' },
+    amber: { '--accent':'#ffb300','--dark':'#1a1206','--cream':'#1a1206','--card':'#26190a','--card2':'#332410','--border':'#3a2c14','--muted':'#9a7a40','--text':'#fff3d6','--text2':'#ccac70','--input-bg':'#26190a','--top-bg':'#120c04','--top-text':'#fff3d6','--top-sub':'#7a5e2a','--nav-bg':'#120c04','--nav-border':'#3a2c14','--nav-inactive':'#5a4520','--toggle-bg':'#2a1e08','--toggle-active':'#ffb300','--settings-bg':'#26190a','--modal-bg':'#26190a','--step-bg':'#1a1206','--note-bg':'#1e1608','--heat-card-bg':'#1a1206','--shadow':'0 2px 12px rgba(0,0,0,.5)','--shadow-lg':'0 4px 24px rgba(30,20,0,.7)' },
+    rosegold: { '--accent':'#c08552','--dark':'#3a2418','--cream':'#fdf3ee','--card':'#ffffff','--card2':'#f8ede4','--border':'#ecd9c8','--muted':'#a88468','--text':'#3a2418','--text2':'#6b4a30','--input-bg':'#ffffff','--top-bg':'#4a3020','--top-text':'#fdf3ee','--top-sub':'#a8845e','--nav-bg':'#ffffff','--nav-border':'#ecd9c8','--nav-inactive':'#c8a888','--toggle-bg':'#f5e6da','--toggle-active':'#c08552','--settings-bg':'#ffffff','--modal-bg':'#ffffff','--step-bg':'#f8ede4','--note-bg':'#fdf6ef','--heat-card-bg':'#f8ede4','--shadow':'0 2px 8px rgba(120,80,40,.1)','--shadow-lg':'0 4px 20px rgba(120,80,40,.18)' },
+    slate: { '--accent':'#56c8d8','--dark':'#0f1419','--cream':'#0f1419','--card':'#1a2128','--card2':'#222b34','--border':'#2a343e','--muted':'#5a7080','--text':'#e0e8ec','--text2':'#9ab0bc','--input-bg':'#1a2128','--top-bg':'#0a0e12','--top-text':'#e0e8ec','--top-sub':'#456070','--nav-bg':'#0a0e12','--nav-border':'#2a343e','--nav-inactive':'#3a5060','--toggle-bg':'#142028','--toggle-active':'#56c8d8','--settings-bg':'#1a2128','--modal-bg':'#1a2128','--step-bg':'#0f1419','--note-bg':'#0f1a1e','--heat-card-bg':'#0f1419','--shadow':'0 2px 12px rgba(0,0,0,.5)','--shadow-lg':'0 4px 24px rgba(0,10,20,.7)' },
+  };
+
   // ---------- Tema uygula ----------
+  // CSS [data-theme] bloğu olan temalar: default, dark, midnight, warm, mint
+  const CSS_THEMES = ['default','dark','midnight','warm','mint'];
+
   function applyTheme() {
     const bodyFont   = FONTS.find(f => f.id === (_s.font       || 'dm'))       || FONTS[0];
     const headerFont = FONTS.find(f => f.id === (_s.headerFont || 'playfair')) || FONTS[1];
     const themeId    = _s.theme || 'default';
+    const root = document.documentElement;
 
-    // data-theme attribute ile CSS variable setini tetikle
-    if (themeId === 'default') {
-      document.documentElement.removeAttribute('data-theme');
+    // Önce JS ile uygulanan tema değişkenlerini temizle
+    Object.keys(THEME_VARS).forEach(tid => {
+      Object.keys(THEME_VARS[tid]).forEach(v => root.style.removeProperty(v));
+    });
+
+    if (CSS_THEMES.includes(themeId)) {
+      // CSS bloğu olan tema → data-theme ile
+      if (themeId === 'default') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', themeId);
+    } else if (THEME_VARS[themeId]) {
+      // JS ile uygulanan tema → data-theme kaldır, değişkenleri set et
+      root.removeAttribute('data-theme');
+      const vars = THEME_VARS[themeId];
+      Object.keys(vars).forEach(v => root.style.setProperty(v, vars[v]));
     } else {
-      document.documentElement.setAttribute('data-theme', themeId);
+      root.removeAttribute('data-theme');
     }
 
-    // Font override (tema üzerine yazılır)
-    document.documentElement.style.setProperty('--font',        bodyFont.css);
-    document.documentElement.style.setProperty('--header-font', headerFont.css);
+    // Font override
+    root.style.setProperty('--font',        bodyFont.css);
+    root.style.setProperty('--header-font', headerFont.css);
 
-    // Vurgu rengi (tema rengi üzerine override)
+    // Yazı büyüklüğü (ölçek faktörü)
+    const scale = _s.fontScale || 1;
+    root.style.setProperty('--font-scale', scale);
+
+    // Vurgu rengi (kullanıcı özel seçtiyse tema üzerine yazılır)
     if (_s.accentColor) {
-      document.documentElement.style.setProperty('--accent', _s.accentColor);
-    } else {
-      document.documentElement.style.removeProperty('--accent');
+      root.style.setProperty('--accent', _s.accentColor);
+    } else if (!THEME_VARS[themeId]) {
+      root.style.removeProperty('--accent');
     }
   }
 
@@ -148,6 +181,15 @@ const Settings = (() => {
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-section-label">Yazı Büyüklüğü</div>
+        <div class="fontsize-row">
+          <span class="fontsize-label" style="font-size:13px">A</span>
+          <input type="range" class="fontsize-slider" min="0.85" max="1.35" step="0.05" value="${_s.fontScale||1}" oninput="Settings._setFontScale(this.value)">
+          <span class="fontsize-label" style="font-size:22px">A</span>
+        </div>
+        <div class="fontsize-preview" style="font-size:calc(15px * ${_s.fontScale||1})">Örnek: Mercimek Çorbası tarifi</div>
+      </div>
+      <div class="settings-section">
         <div class="settings-section-label">Veri Yönetimi</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button class="settings-action-btn" onclick="App.exportAll()">📤 Tüm Verileri Dışa Aktar (JSON)</button>
@@ -207,6 +249,7 @@ const Settings = (() => {
   function _setHeaderFont(id) { _s.headerFont = id;  save(); applyTheme(); renderPanel(); }
   function _setAccent(c)      { _s.accentColor = c;  save(); applyTheme(); renderPanel(); }
   function _setTheme(id)      { _s.theme = id; _s.accentColor = null; save(); applyTheme(); renderPanel(); }
+  function _setFontScale(v)   { _s.fontScale = parseFloat(v); save(); applyTheme(); const p=document.querySelector('.fontsize-preview'); if(p)p.style.fontSize='calc(15px * '+v+')'; }
 
   // --- Malzeme etiket işlemleri ---
   function _addIngTag(cat) {
@@ -255,7 +298,7 @@ const Settings = (() => {
     load, save, get, set, applyTheme,
     getIngTags, getToolTags, getAllTools, getToolByName, getAllIngredients,
     openPanel, closePanel,
-    _setTab, _setFont, _setHeaderFont, _setAccent, _setTheme,
+    _setTab, _setFont, _setHeaderFont, _setAccent, _setTheme, _setFontScale,
     _addIngTag, _delIngTag, _addIngCat,
     _addTool, _addToolCat, _editTool,
   };
