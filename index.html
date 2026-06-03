@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a1a2e">
 <title>Tarif Defterim</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Lora:wght@400;700&family=Nunito:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&family=Lora:wght@400;700&family=Nunito:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Poppins:wght@400;600;700&family=Montserrat:wght@400;600;800&family=Cormorant+Garamond:wght@400;600;700&family=Crimson+Pro:wght@400;600;700&family=Space+Mono:wght@400;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
         </div>
         <div class="top-actions">
           <button class="icon-btn" onclick="Settings.openPanel()">⚙️</button>
-          <button class="fab" onclick="Form.openAdd()">+</button>
+          <button class="fab" onclick="App.chooseEntryType()">+</button>
         </div>
       </div>
     </div>
@@ -101,6 +101,20 @@
     <div class="detail-body" id="heat-detail-body"></div>
   </div>
 
+  <!-- ══════════════ DETAYLI FORM VIEW ══════════════ -->
+  <div id="view-detail-form" class="full-view">
+    <div class="form-header">
+      <button class="back-btn2" onclick="DetailForm.cancel()">←</button>
+      <div id="form-title-text" style="color:var(--top-text);font-size:18px;font-family:var(--header-font)">Detaylı Tarif</div>
+    </div>
+    <div class="form-body" id="detail-form-body"></div>
+  </div>
+
+  <!-- ══════════════ DETAYLI GÖRÜNÜM ══════════════ -->
+  <div id="view-detail-view" class="full-view" style="padding:0">
+    <div id="detail-view-root" class="dv-root"></div>
+  </div>
+
   <!-- ══════════════ HEAT FORM VIEW ══════════════ -->
   <div id="view-heat-form" class="full-view">
     <div class="form-header">
@@ -167,6 +181,36 @@
 <!-- Pişirme Modu (tam ekran) -->
 <div class="cook-overlay" id="cook-overlay"></div>
 
+<!-- Entry Tipi Seçici -->
+<div class="modal-overlay" id="entry-type-overlay" onclick="if(event.target===this)App.closeEntryType()">
+  <div class="modal" style="max-width:360px">
+    <h3>Nasıl bir tarif?</h3>
+    <p>İhtiyacına göre seç</p>
+    <button class="entry-type-card" onclick="App.newDefaultEntry()">
+      <div class="etc-icon">⚡</div>
+      <div class="etc-info"><div class="etc-title">Hızlı Tarif</div><div class="etc-desc">Basit, tek sayfa — çabuk ekle</div></div>
+    </button>
+    <button class="entry-type-card" onclick="App.newDetailedEntry()">
+      <div class="etc-icon">📖</div>
+      <div class="etc-info"><div class="etc-title">Detaylı Tarif</div><div class="etc-desc">Sekmeli, banner, sos & alternatifler</div></div>
+    </button>
+    <button class="modal-cancel" style="width:100%;margin-top:8px" onclick="App.closeEntryType()">İptal</button>
+  </div>
+</div>
+
+<!-- Toplu Malzeme Yapıştırma -->
+<div class="modal-overlay" id="bulk-paste-overlay" onclick="if(event.target===this)Form._closeBulkPaste()">
+  <div class="modal" style="max-width:400px;text-align:left">
+    <h3>📋 Toplu Malzeme Yapıştır</h3>
+    <p style="text-align:left">Her satıra bir malzeme yaz. Miktar ve isim otomatik ayrılır.</p>
+    <textarea class="form-textarea" id="bulk-paste-input" rows="8" placeholder="1.5 yemek kaşığı zeytinyağı&#10;2 su bardağı un&#10;3 diş sarımsak&#10;yarım limon&#10;tuz"></textarea>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="modal-cancel" onclick="Form._closeBulkPaste()">İptal</button>
+      <button class="modal-confirm" style="background:var(--accent)" onclick="Form._applyBulkPaste()">Ekle</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -177,6 +221,8 @@
 <script src="js/render.js"></script>
 <script src="js/form.js"></script>
 <script src="js/heatform.js"></script>
+<script src="js/detailform.js"></script>
+<script src="js/detailview.js"></script>
 <script src="js/app.js"></script>
 <script>
   // Expose _currentPage for back button
