@@ -180,20 +180,67 @@ const App = (() => {
   }
 
   // ---------- Alışveriş Listesi ----------
+  // Bir tarifin tüm malzemelerini düz liste olarak çıkar (default + detaylı)
+  function _extractIngredients(r) {
+    const out = [];
+    if (r.type === 'detailed') {
+      (r.tabs || []).forEach(tab => (tab.blocks || []).forEach(b => {
+        if (b.type === 'ingredients' || b.type === 'mini') {
+          (b.items || []).forEach(it => {
+            if (it.name && it.name.trim()) out.push({ amount: (it.amount||'').trim(), name: it.name.trim() });
+          });
+        }
+      }));
+    } else {
+      (r.ingredients || []).forEach(ing => {
+        const s = String(ing).trim();
+        if (!s) return;
+        // "500 g un" → amount + name ayır (kabaca)
+        const m = s.match(/^([\d.,]+\s*[^\s]*)\s+(.+)$/);
+        if (m && /\d/.test(m[1])) out.push({ amount: m[1].trim(), name: m[2].trim() });
+        else out.push({ amount:'', name:s });
+      });
+    }
+    return out;
+  }
+
+  // Malzeme adından market kategorisi tahmin et
+  function _guessAisle(name) {
+    const n = name.toLowerCase();
+    const tags = Settings.getIngTags ? Settings.getIngTags() : {};
+    for (const [cat, arr] of Object.entries(tags)) {
+      if (arr.some(t => n.includes(t.toLowerCase()) || t.toLowerCase().includes(n))) return cat;
+    }
+    return 'Diğer';
+  }
+
   function addToShopping(recipeId) {
     const r = getRecipeById(recipeId);
-    if (!r || !r.ingredients?.length) { showToast('Malzeme yok'); return; }
+    if (!r) return;
+    const ings = _extractIngredients(r);
+    if (!ings.length) { showToast('Malzeme bulunamadı'); return; }
     const list = Storage.getShopping();
     let added = 0;
-    r.ingredients.forEach(ing => {
-      const name = String(ing).trim();
-      if (!list.find(x => x.name.toLowerCase() === name.toLowerCase())) {
-        list.push({ id: Date.now()+Math.random(), name, from: r.name, done: false });
+    ings.forEach(ing => {
+      const existing = list.find(x => x.name.toLowerCase() === ing.name.toLowerCase());
+      if (existing) {
+        // Aynı malzeme tekrar → miktarı not olarak birleştir
+        if (ing.amount && existing.amount && !existing.amount.includes(ing.amount)) {
+          existing.amount = existing.amount + ' + ' + ing.amount;
+        } else if (ing.amount && !existing.amount) {
+          existing.amount = ing.amount;
+        }
+      } else {
+        list.push({
+          id: Date.now()+Math.random(),
+          name: ing.name, amount: ing.amount || '',
+          from: r.name, aisle: _guessAisle(ing.name), done: false
+        });
         added++;
       }
     });
     Storage.saveShopping(list);
-    showToast(`🛒 ${added} malzeme eklendi`);
+    showToast(added ? `🛒 ${added} malzeme eklendi` : '🛒 Liste güncellendi');
   }
 
   function openShopping() {
@@ -203,45 +250,114 @@ const App = (() => {
   function closeShopping() {
     document.getElementById('shop-overlay').classList.remove('open');
   }
+
+  let _shopGroupBy = 'aisle'; // 'aisle' | 'recipe' | 'none'
+  function setShopGroup(mode) { _shopGroupBy = mode; _renderShopping(); }
+
   function _renderShopping() {
     const list = Storage.getShopping();
     const body = document.getElementById('shop-list');
+    const countEl = document.getElementById('shop-count');
+
+    const total = list.length, done = list.filter(x=>x.done).length;
+    if (countEl) countEl.textContent = total ? `${done}/${total} tamamlandı` : '';
+
+    // Grup başlığı seçici
+    const grpBar = document.getElementById('shop-group-bar');
+    if (grpBar) {
+      grpBar.innerHTML = [['aisle','📦 Reyona Göre'],['recipe','🍽️ Tarife Göre'],['none','📋 Düz Liste']]
+        .map(([id,l])=>`<button class="shop-grp-chip${_shopGroupBy===id?' active':''}" onclick="App.setShopGroup('${id}')">${l}</button>`).join('');
+    }
+
     if (!list.length) {
-      body.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">Liste boş</div><div class="empty-hint">Tariflerden malzeme ekleyebilirsin</div></div>';
+      body.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">Liste boş</div><div class="empty-hint">Tariflerden 🛒 ile malzeme ekle</div></div>';
+      return;
+    }
+
+    // Gruplama
+    let groups = {};
+    if (_shopGroupBy === 'none') {
+      groups = { '': list };
     } else {
-      body.innerHTML = list.map(item => `
+      const key = _shopGroupBy === 'recipe' ? 'from' : 'aisle';
+      list.forEach(item => {
+        const g = item[key] || (key==='from'?'Elle eklenen':'Diğer');
+        (groups[g] = groups[g] || []).push(item);
+      });
+    }
+
+    body.innerHTML = Object.entries(groups).map(([grp, items]) => `
+      ${grp ? `<div class="shop-group-label">${grp}</div>` : ''}
+      ${items.map(item => `
         <div class="shop-item ${item.done?'done':''}">
           <div class="shop-check ${item.done?'checked':''}" onclick="App.toggleShopItem('${item.id}')">${item.done?'✓':''}</div>
-          <div class="shop-item-name">${item.name}${item.from?`<div class="shop-item-from">${item.from}</div>`:''}</div>
+          <div class="shop-item-main">
+            <span class="shop-item-name">${item.name}</span>
+            ${item.amount?`<span class="shop-item-amount">${item.amount}</span>`:''}
+            ${(_shopGroupBy!=='recipe'&&item.from)?`<div class="shop-item-from">${item.from}</div>`:''}
+          </div>
           <button class="tag-del" onclick="App.removeShopItem('${item.id}')">×</button>
-        </div>`).join('');
-    }
+        </div>`).join('')}
+    `).join('');
   }
+
   function toggleShopItem(id) {
     const list = Storage.getShopping();
     const item = list.find(x => String(x.id) === String(id));
     if (item) { item.done = !item.done; Storage.saveShopping(list); _renderShopping(); }
   }
   function removeShopItem(id) {
-    let list = Storage.getShopping().filter(x => String(x.id) !== String(id));
-    Storage.saveShopping(list);
+    Storage.saveShopping(Storage.getShopping().filter(x => String(x.id) !== String(id)));
     _renderShopping();
   }
   function addShopManual() {
     const inp = document.getElementById('shop-add-input');
     const val = inp?.value.trim();
     if (!val) return;
+    // "2 kg elma" gibi girilirse miktarı ayır
+    const m = val.match(/^([\d.,]+\s*[^\s]*)\s+(.+)$/);
+    const item = (m && /\d/.test(m[1]))
+      ? { amount:m[1].trim(), name:m[2].trim() }
+      : { amount:'', name:val };
     const list = Storage.getShopping();
-    list.push({ id: Date.now()+Math.random(), name: val, from:'', done:false });
+    list.push({ id: Date.now()+Math.random(), name:item.name, amount:item.amount, from:'', aisle:_guessAisle(item.name), done:false });
     Storage.saveShopping(list);
     if (inp) inp.value = '';
     _renderShopping();
   }
   function clearShoppingDone() {
-    const list = Storage.getShopping().filter(x => !x.done);
-    Storage.saveShopping(list);
+    Storage.saveShopping(Storage.getShopping().filter(x => !x.done));
+    _renderShopping();
+    showToast('Tamamlananlar temizlendi');
+  }
+  function clearShoppingAll() {
+    if (!Storage.getShopping().length) return;
+    if (!confirm('Tüm alışveriş listesi silinsin mi?')) return;
+    Storage.saveShopping([]);
     _renderShopping();
   }
+
+  // Listeyi metin olarak paylaş/kopyala
+  async function shareShopping() {
+    const list = Storage.getShopping();
+    if (!list.length) { showToast('Liste boş'); return; }
+    let text = '🛒 Alışveriş Listesi\n\n';
+    // reyona göre grupla
+    const groups = {};
+    list.forEach(i => { const g=i.aisle||'Diğer'; (groups[g]=groups[g]||[]).push(i); });
+    Object.entries(groups).forEach(([g, items]) => {
+      text += `${g}:\n`;
+      items.forEach(i => { text += `${i.done?'✓':'•'} ${i.amount?i.amount+' ':''}${i.name}\n`; });
+      text += '\n';
+    });
+    try {
+      if (navigator.share) { await navigator.share({ title:'Alışveriş Listesi', text }); }
+      else { await navigator.clipboard.writeText(text); showToast('📋 Panoya kopyalandı'); }
+    } catch(e) {
+      try { await navigator.clipboard.writeText(text); showToast('📋 Panoya kopyalandı'); } catch(_) {}
+    }
+  }
+
 
   // ---------- Detay ----------
   function openDetail(id) {
@@ -364,6 +480,79 @@ const App = (() => {
     return new Date().toISOString().slice(0,10);
   }
 
+  // ---------- Yazdır / PDF ----------
+  async function printRecipe(id) {
+    const r = getRecipeById(id);
+    if (!r) return;
+
+    // Görsel varsa base64 al
+    let imgTag = '';
+    if (r.hasImage) {
+      const blob = await Storage.getImage(r.id);
+      if (blob) {
+        const b64 = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(blob);});
+        imgTag = `<img src="${b64}" style="width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:16px">`;
+      }
+    }
+
+    const ings = _extractIngredients(r);
+    const ingHtml = ings.map(i=>`<li>${i.amount?`<b>${i.amount}</b> `:''}${i.name}</li>`).join('');
+
+    // Adımlar
+    let stepsHtml = '';
+    if (r.type === 'detailed') {
+      (r.tabs||[]).forEach(tab=>{
+        (tab.blocks||[]).forEach(b=>{
+          if (b.type==='steps') {
+            stepsHtml += (b.items||[]).map((it,i)=>`<li>${it.title?`<b>${_e(it.title)}</b><br>`:''}${_e(it.text||'')}${it.box&&it.box.text?`<div style="background:#f4f0e8;border-left:3px solid #c9a84c;padding:6px 10px;margin-top:6px;font-size:13px">${_e(it.box.text)}</div>`:''}</li>`).join('');
+          }
+        });
+      });
+    } else if (r.stepsMode==='list' && r.stepsArray?.length) {
+      stepsHtml = r.stepsArray.map(s=>`<li>${_e(s)}</li>`).join('');
+    } else if (r.stepsText) {
+      stepsHtml = r.stepsText.split(/\n\n+/).map(s=>`<li>${_e(s.trim())}</li>`).join('');
+    }
+
+    const meta = [
+      r.duration?`⏱ ${r.duration}`:'',
+      `👥 ${r.servings} kişilik`,
+      r.difficulty?`📊 ${r.difficulty}`:'',
+      r.calories?`🔥 ${r.calories} kcal`:''
+    ].filter(Boolean).join(' &nbsp;•&nbsp; ');
+
+    const win = window.open('', '_blank');
+    if (!win) { showToast('Açılır pencere engellendi'); return; }
+    win.document.write(`<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
+      <title>${_e(r.name)}</title>
+      <style>
+        @media print { @page { margin:1.5cm; } }
+        body{font-family:Georgia,'Times New Roman',serif;color:#222;max-width:720px;margin:0 auto;padding:24px;line-height:1.6}
+        h1{font-size:28px;margin:0 0 4px;border-bottom:3px solid #c9a84c;padding-bottom:8px}
+        .sub{color:#888;font-style:italic;margin-bottom:8px}
+        .meta{color:#555;font-size:14px;margin-bottom:18px}
+        h2{font-size:18px;color:#c9a84c;border-bottom:1px solid #eee;padding-bottom:4px;margin-top:24px}
+        ul,ol{padding-left:22px} li{margin-bottom:8px}
+        .note{background:#fffbf0;border-left:4px solid #c9a84c;padding:10px 14px;margin-top:16px;font-style:italic}
+        .foot{margin-top:30px;text-align:center;color:#bbb;font-size:12px}
+        .btn{position:fixed;top:16px;right:16px;background:#c9a84c;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer}
+        @media print { .btn{display:none} }
+      </style></head><body>
+      <button class="btn" onclick="window.print()">🖨️ Yazdır / PDF</button>
+      ${imgTag}
+      <h1>${_e(r.name)}</h1>
+      ${r.subtitle?`<div class="sub">${_e(r.subtitle)}</div>`:''}
+      <div class="meta">${meta}</div>
+      ${ingHtml?`<h2>🛒 Malzemeler</h2><ul>${ingHtml}</ul>`:''}
+      ${stepsHtml?`<h2>👨‍🍳 Hazırlanış</h2><ol>${stepsHtml}</ol>`:''}
+      ${r.notes?`<div class="note"><b>📝 Not:</b> ${_e(r.notes)}</div>`:''}
+      <div class="foot">Tarif Defterim ile oluşturuldu</div>
+      <script>setTimeout(()=>window.print(),400)<\/script>
+      </body></html>`);
+    win.document.close();
+  }
+  function _e(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
   // ---------- Toast ----------
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -385,7 +574,8 @@ const App = (() => {
     exportAll, exportAllWithImages, exportRecipe, importAll,
     chooseEntryType, closeEntryType, newDefaultEntry, newDetailedEntry,
     randomRecipe, addToShopping, openShopping, closeShopping,
-    toggleShopItem, removeShopItem, addShopManual, clearShoppingDone,
+    toggleShopItem, removeShopItem, addShopManual, clearShoppingDone, clearShoppingAll,
+    setShopGroup, shareShopping, printRecipe,
     showToast,
   };
 })();

@@ -53,6 +53,8 @@ const DetailView = (() => {
         <button class="dv-back" onclick="App.showPage(App._cp||'recipes')">←</button>
         <div class="dv-topbar-actions">
           <button class="dv-icon-btn" onclick="DetailView._edit()">✏️</button>
+          <button class="dv-icon-btn" onclick="App.addToShopping(${r.id})">🛒</button>
+          <button class="dv-icon-btn" onclick="App.printRecipe(${r.id})">🖨️</button>
           <button class="dv-icon-btn" onclick="App.copyRecipe(${r.id})">📋</button>
           <button class="dv-icon-btn" onclick="App.exportRecipe(${r.id})">📤</button>
           <button class="dv-icon-btn danger" onclick="App.openDeleteModal(${r.id})">🗑️</button>

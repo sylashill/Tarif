@@ -129,6 +129,7 @@ const Render = (() => {
         <button class="edit-btn" style="background:${r.color}" onclick="Form.openEdit(${r.id})">✏️ Düzenle</button>
         <button class="copy-btn" onclick="App.copyRecipe(${r.id})">📋</button>
         <button class="add-shop-btn" onclick="App.addToShopping(${r.id})">🛒</button>
+        <button class="print-btn" onclick="App.printRecipe(${r.id})">🖨️</button>
         <button class="export-btn" onclick="App.exportRecipe(${r.id})">📤</button>
         <button class="delete-btn" onclick="App.openDeleteModal(${r.id})">🗑️</button>
       </div>
